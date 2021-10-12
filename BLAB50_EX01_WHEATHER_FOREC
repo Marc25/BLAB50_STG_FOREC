@@ -1,0 +1,48 @@
+# BLAB50 : Example user reims library and ts analysis from wheather data
+library(riem)
+library(forecast)
+library(data.table)
+library(dplyr)
+# Use reim library
+  # Get Stations
+  # GET DATA WHEATHER STATION 
+View(riem_networks())
+# ES__ASOS: From Spain Codes
+View(riem_stations(network = "ES__ASOS"))
+# LEAM: Almeria
+measures <- riem_measures(station = "LEAM", date_start = "2000-01-01")
+head(measures)
+
+dtAlm <- measures
+dtAlm <- as.data.table(dtAlm)
+dtAlm <- dtAlm[, .(temperature=mean(tmpf)), .(day=as.Date(valid))]
+dtAlm[, temperature:=weathermetrics::fahrenheit.to.celsius(temperature)]
+dtAlm
+# use TsClean
+# library(tsclean)
+dtAlm_ts <- ts(tsclean(dtAlm$temperature), start = c(2010, 1) , freq= 365.25)
+autoplot(dtAlm_ts) +
+  xlab("Day")+
+  ylab("Temp in Almeria airport (ºC)")
+
+library("ggplot2")
+
+library("forecast")
+# marseille_ts = ts(as.vector(tsclean(marseille$temperature)), freq=365.25, start=c(2010, 1))
+# autoplot(marseille_ts) +
+#   ylab("Daily average temperature in Marseille airport (ºC)") +
+#   xlab("Time (days)")
+
+fit <- stlm(dtAlm_ts)
+print(fit)
+summary(fit)
+pred <- forecast(fit, h = 7)
+
+# plot
+theme_set(theme_gray(base_size = 14))
+autoplot(pred) +
+  ylab("Daily average temperature in Almeria airport (ºC)") +
+  xlab("Time (days)") +
+  ggtitle("How cold will I be during the holidays?",
+          subtitle = "Data accessed via the rOpenSci riem package and forecasted with forecast")
+
